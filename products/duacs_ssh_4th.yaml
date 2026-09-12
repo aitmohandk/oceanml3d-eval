@@ -1,0 +1,5 @@
+name: duacs_ssh
+path: ${OCEANML3D_DATA}/duacs/daily
+pattern: duacs_(\d{4})-(\d{2})-(\d{2})\.nc
+variables: {ssh: {name: adt}}
+coords: {lat: latitude, lon: longitude, time: time}

@@ -1,0 +1,11 @@
+name: ocean_reanalysis_osse
+description: Full-state OSSE (4dvarnet-ocean-reanalyses CS1-CS4) - surface variables vs GLORYS truth.
+period: ["2019-01-01", "2019-12-31"]
+variables: [ssh, sst, u, v]
+references:
+  glorys_truth: {kind: gridded, path: ../products/glorys_surface_1deg.yaml}
+regions: [global]
+metrics:
+  - {name: gridded_rmse,   reference: glorys_truth, options: {variables: [ssh, sst, u, v]}}
+  - {name: spectral_score, reference: glorys_truth, options: {variables: [ssh]}}
+leaderboard: [nrmse_ssh, nrmse_sst, nrmse_u, nrmse_v]

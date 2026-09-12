@@ -1,0 +1,7 @@
+name: globcurrent_15m
+label: GlobCurrent total 15 m (CMEMS MULTIOBS)
+path: ${OCEANML3D_DATA}/uv/GC_daily/daily
+pattern: globcurrent_(\d{4})-(\d{2})-(\d{2})\.nc
+variables: {u: {name: uo}, v: {name: vo}}
+coords: {lat: latitude, lon: longitude, time: time}
+depth_m: 15

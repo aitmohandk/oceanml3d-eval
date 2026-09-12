@@ -1,0 +1,5 @@
+name: glorys_surface_truth
+path: ${OCEANML3D_DATA}/glorys_1deg/daily
+pattern: glorys_(\d{4})-(\d{2})-(\d{2})\.nc
+variables: {ssh: {name: zos}, sst: {name: thetao}, u: {name: uo}, v: {name: vo}}
+depth_index: 0

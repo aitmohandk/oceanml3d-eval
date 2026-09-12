@@ -1,0 +1,30 @@
+name: end-to-end
+# The degraded-mode chain the analysis asks for: train on synthetic data (CPU) in oceanml3d-core,
+# export a product, evaluate it here. Catches contract drift between the two repos.
+on: [push, pull_request]
+jobs:
+  chain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: oceanml3d-eval}
+      - uses: actions/checkout@v4
+        with: {repository: ${{ github.repository_owner }}/oceanml3d-core, path: oceanml3d-core}
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.11"}
+      - run: pip install --index-url https://download.pytorch.org/whl/cpu torch
+      - run: pip install -e ./oceanml3d-core[torch] -e ./oceanml3d-eval[dev] tabulate
+      - name: contract files identical in both repos
+        run: cmp oceanml3d-core/oceanml3d/inference/product_contract.py oceanml3d-eval/oceanml3d_eval/product_contract.py
+      - name: train + export a product (synthetic, CPU)
+        working-directory: oceanml3d-core
+        run: |
+          python scripts/make_synthetic_data.py --osse
+          oceanml3d command=validate experiment=osse3d_smoke
+          oceanml3d experiment=osse3d_smoke
+      - name: evaluate that product
+        working-directory: oceanml3d-eval
+        run: |
+          PRODUCT=$(ls -d ../oceanml3d-core/outputs/osse3d_smoke/*/product/product.yaml | tail -1)
+          python -c "from oceanml3d_eval.product import ProductSpec; print(ProductSpec.load('$PRODUCT'))"
+          oceanml3d-eval list

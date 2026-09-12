@@ -1,0 +1,29 @@
+name: surface_currents_15m
+description: Daily 15 m currents vs drogued AOML drifters (NOSC setting), year 2019.
+period: ["2019-01-01", "2019-12-31"]
+variables: [u, v]
+references:
+  drifters_aoml_15m:
+    kind: drifters_points
+    path: ${OCEANML3D_DATA}/drifters/aoml/drifter_*_2019.nc
+    depth_m: 15
+    options: {columns: {time: date, u: ums, v: vms}, max_speed: 10.0}
+regions: [global, GulfStream, Agulhas, Mediterranean, California, NA, Hawai, Canary]
+metrics:
+  - {name: eulerian_drifters,   reference: drifters_aoml_15m, options: {bin_deg: 2.0}}
+  - {name: lagrangian_drifters, reference: drifters_aoml_15m, options: {days: 5}}
+  # Exact NOSC diagnostics through the vendored OceanDataLab package (pip install -e third_party/velocity_metrics):
+  # - name: lagrangian_drifters
+  #   reference: drifters_aoml_15m
+  #   options:
+  #     backend: velocity_metrics
+  #     days: 10
+  #     sdepth: 1
+  #     parameter_file: ${OCEANML3D_DATA}/velocity_metrics/drifters_parameters.ini
+  #     drifter_positions: ${OCEANML3D_DATA}/drifters/AOML/json/Fictive_pos_Drifters_AOML_GL_15m_20190101T000000Z_20200101T000000Z.pyo.json
+  #     drifter_file: ${OCEANML3D_DATA}/drifters/AOML/Drifters_AOML_GL_15m_20190101T000000Z_20200101T000000Z.pyo.gz
+baselines:
+  duacs_geostrophy: ../products/duacs_geos_15m.yaml
+  globcurrent_15m:  ../products/globcurrent_15m.yaml
+  neurost_15m:      ../products/neurost_ssh_15m.yaml
+leaderboard: [rmse_vec, var_explained_vec, sep_km_day5]

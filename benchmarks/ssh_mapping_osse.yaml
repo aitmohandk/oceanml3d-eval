@@ -1,0 +1,13 @@
+name: ssh_mapping_osse
+description: SSH reconstruction vs GLORYS truth (OSSE), data-challenge style scores.
+period: ["2019-01-01", "2019-12-31"]
+variables: [ssh]
+references:
+  glorys_truth: {kind: gridded, path: ../products/glorys_ssh_4th.yaml}
+regions: [global, GulfStream, Agulhas]
+metrics:
+  - {name: gridded_rmse,   reference: glorys_truth, options: {variables: [ssh]}}
+  - {name: spectral_score, reference: glorys_truth, options: {variables: [ssh]}}
+baselines:
+  duacs_ssh: ../products/duacs_ssh_4th.yaml
+leaderboard: [mu_ssh, sigma_ssh, eff_resolution_km_ssh]

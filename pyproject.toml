@@ -1,0 +1,58 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oceanml3d-eval"
+version = "0.1.0"
+description = "Benchmarks and metrics for ocean reconstruction products (neural models and baselines alike)."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+dependencies = [
+    "numpy>=1.24",
+    "scipy>=1.11",
+    "pandas>=2.0",
+    "xarray>=2023.1",
+    "netCDF4>=1.6",
+    "dask>=2023.1",
+    "pyyaml>=6.0",
+    "shapely>=2.0",
+]
+
+[project.optional-dependencies]
+plots = ["matplotlib>=3.8", "cartopy>=0.22"]
+lagrangian = ["numba>=0.58"]         # backend third_party/velocity_metrics
+dev = ["pytest>=7.4", "pytest-cov>=4.1", "ruff>=0.4"]
+
+[project.scripts]
+oceanml3d-eval = "oceanml3d_eval.cli:main"
+
+[project.entry-points."oceanml3d_eval.metrics"]
+eulerian_drifters = "oceanml3d_eval.metrics.eulerian:EulerianDrifters"
+ensemble_scores = "oceanml3d_eval.metrics.ensemble:EnsembleScores"
+gridded_rmse = "oceanml3d_eval.metrics.gridded:GriddedRMSE"
+spectral_score = "oceanml3d_eval.metrics.spectral:SpectralScore"
+lagrangian_drifters = "oceanml3d_eval.metrics.lagrangian:LagrangianDrifters"
+
+[tool.setuptools.packages.find]
+include = ["oceanml3d_eval*"]
+
+[tool.ruff]
+line-length = 100
+extend-exclude = ["third_party", "legacy_from_fm"]
+force-exclude = true
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+# product_contract.py is byte-for-byte shared with oceanml3d-core and hash-pinned: never edit it here.
+"oceanml3d_eval/product_contract.py" = ["UP038"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = ["slow: expensive tests"]
+addopts = "-q"

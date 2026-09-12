@@ -1,0 +1,6 @@
+name: neurost_15m
+label: NeurOST SSH-SST geostrophy
+path: ${OCEANML3D_DATA}/neurost/daily
+pattern: neurost_(\d{4})-(\d{2})-(\d{2})\.nc
+variables: {u: {name: ugos}, v: {name: vgos}}
+depth_m: 15

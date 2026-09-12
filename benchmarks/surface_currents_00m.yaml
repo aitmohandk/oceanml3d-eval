@@ -1,0 +1,16 @@
+name: surface_currents_00m
+description: Daily surface (0 m, undrogued) currents vs AOML drifters, year 2019.
+period: ["2019-01-01", "2019-12-31"]
+variables: [u, v]
+references:
+  drifters_aoml_00m:
+    kind: drifters_points
+    path: ${OCEANML3D_DATA}/drifters/drifter_00m/AOML_GL_00/drifter_*_2019.nc
+    depth_m: 0
+    options: {columns: {time: date, u: ums, v: vms}, max_speed: 10.0}
+regions: [global, GulfStream, Agulhas, Mediterranean, California, NA]
+metrics:
+  - {name: eulerian_drifters, reference: drifters_aoml_00m, options: {bin_deg: 2.0}}
+baselines:
+  duacs_geostrophy: ../products/duacs_geos_15m.yaml
+leaderboard: [rmse_vec, var_explained_vec]

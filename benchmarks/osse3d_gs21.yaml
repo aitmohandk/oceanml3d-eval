@@ -1,0 +1,13 @@
+name: osse3d_gs21
+description: 3D multivariate OSSE, Gulf Stream, GLORYS12 truth, 21 levels (NOSC first_implementation). Skill vs depth.
+period: ["2019-01-01", "2019-12-31"]
+variables: [ssh, thetao_d00, thetao_d02, thetao_d04, thetao_d06, thetao_d08, thetao_d10, thetao_d11, thetao_d12, thetao_d13, thetao_d14, thetao_d15, thetao_d16, thetao_d17, thetao_d18, thetao_d19, thetao_d20, thetao_d21, thetao_d22, thetao_d23, thetao_d24, thetao_d25,
+            u_d00, u_d02, u_d04, u_d06, u_d08, u_d10, u_d11, u_d12, u_d13, u_d14, u_d15, u_d16, u_d17, u_d18, u_d19, u_d20, u_d21, u_d22, u_d23, u_d24, u_d25,
+            v_d00, v_d02, v_d04, v_d06, v_d08, v_d10, v_d11, v_d12, v_d13, v_d14, v_d15, v_d16, v_d17, v_d18, v_d19, v_d20, v_d21, v_d22, v_d23, v_d24, v_d25]
+references:
+  glorys_truth: {kind: gridded, path: ../products/glorys_gs21_truth.yaml}
+regions: [GulfStream_eval]
+metrics:
+  - {name: gridded_rmse,   reference: glorys_truth}
+  - {name: spectral_score, reference: glorys_truth, options: {variables: [ssh], isotropic: true, time_stride: 5}}
+leaderboard: [nrmse_ssh, nrmse_thetao_d00, nrmse_thetao_d12, nrmse_thetao_d25, nrmse_u_d00, nrmse_u_d25, eff_resolution_km_ssh]

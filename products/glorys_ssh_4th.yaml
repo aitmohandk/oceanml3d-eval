@@ -1,0 +1,5 @@
+name: glorys_ssh_truth
+path: ${OCEANML3D_DATA}/glorys/daily
+pattern: glorys_(\d{4})-(\d{2})-(\d{2})\.nc
+variables: {ssh: {name: zos}}
+coords: {lat: latitude, lon: longitude, time: time}

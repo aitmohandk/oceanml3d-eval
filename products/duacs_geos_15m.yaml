@@ -1,0 +1,7 @@
+name: duacs_geostrophy
+label: DUACS geostrophic currents (L4, 1/4 deg)
+path: ${OCEANML3D_DATA}/duacs/daily
+pattern: duacs_(\d{4})-(\d{2})-(\d{2})\.nc
+variables: {u: {name: ugos}, v: {name: vgos}}
+coords: {lat: latitude, lon: longitude, time: time}
+depth_m: 15

@@ -1,0 +1,48 @@
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg
+*.egg-info/
+build/
+dist/
+
+# --- Environnements virtuels ---
+.venv/
+venv/
+env/
+
+# --- Caches d'outils ---
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# --- Couverture de tests ---
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# --- Sorties d'exécution ---
+outputs/
+multirun/
+results/
+lightning_logs/
+*.log
+# NB: baselines/*.json (portail de non-régression) est versionné volontairement.
+
+# --- Données et poids de modèles ---
+data/
+*.nc
+*.zarr
+*.ckpt
+*.pkl
+# Pour versionner une fixture NetCDF malgré la règle ci-dessus :
+#   !tests/fixtures/<nom>.nc
+
+# --- Système / éditeurs ---
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp

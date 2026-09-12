@@ -1,0 +1,14 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "velocity_metrics"
+version = "0.1.0"
+description = "Velocity product validation tools (OceanDataLab) - vendored from NOSC/env for the oceanml3d-eval Lagrangian/spectral backend."
+license = { text = "LGPL-3.0-or-later" }
+requires-python = ">=3.9"
+dependencies = ["numpy", "scipy", "netCDF4", "xarray", "matplotlib", "tqdm", "pyproj"]
+
+[tool.setuptools.packages.find]
+include = ["velocity_metrics*"]

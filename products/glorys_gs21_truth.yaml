@@ -1,0 +1,11 @@
+# GLORYS truth exported as a product with one variable per level (run `oceanml3d command=predict`
+# on the truth or write it with oceanml3d.inference.export.write_product); depth_index in the name.
+name: glorys_gs21_truth
+path: ${OCEANML3D_DATA}/glorys_gs21_truth/daily
+pattern: glorys_gs21_truth_(\d{4})-(\d{2})-(\d{2})\.nc
+variables:
+  ssh: {name: ssh}
+  thetao_d00: {name: thetao_d00}
+  u_d00: {name: u_d00}
+  v_d00: {name: v_d00}
+  # ... one entry per level (generated from the product.yaml written by oceanml3d-core)

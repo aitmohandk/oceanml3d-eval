@@ -1,5 +1,30 @@
 # Changelog
 
+## 2026-09-20: `split --depth-indices`, and a truth the OSSE-3D benchmark can actually use
+
+**Summary:** `split` turns a depth-resolved store into one variable per level (`thetao_d00`,
+`u_d12`...), so the GLORYS truth of `osse3d_gs21` can be built with one command.
+`products/glorys_gs21_truth.yaml` now lists the 64 variables the benchmark asks for instead of
+three and a comment.
+
+**Files modified:** `oceanml3d_eval/split.py` -- `depth_indices`, `_flatten_depth`,
+`parse_indices`, manifest validated against the contract before it is written, missing variables
+and out-of-range levels refused; `oceanml3d_eval/cli.py` -- `--depth-indices '0,2,4' | '0-25' |
+'all'`; `products/glorys_gs21_truth.yaml`, `products/README.md`, `README.md`;
+`tests/test_split_plots.py`.
+
+**Rationale:** The benchmark could not be run as shipped: its reference manifest was a stub, and
+`split` only ever kept one level, under the plain name (`u`, not `u_d05`), so nothing produced the
+`<var>_d<ii>` layout that both the benchmark and the products exported by `oceanml3d-core` use.
+Levels are selected by position on the depth axis, not by metres: that is what `depth_index` means
+in core's `config/data/osse3d_gs21.yaml`, and reading them as metres would silently shift every
+level the day the truth is prepared at another vertical sampling.
+
+**Verification:** `pytest` -- 43 passed. End to end on a synthetic GLORYS-like store: `split
+--depth-indices 0,2,4,6,8,10-25` wrote a 64-variable truth, and `oceanml3d-eval run -b osse3d_gs21`
+produced the leaderboard and the skill-vs-depth table against a model product.
+
+
 ## 2026-09-11: Rename to `oceanml3d-eval`, package included
 
 **Summary:** the repository directory, the distribution, the import package and every reference to

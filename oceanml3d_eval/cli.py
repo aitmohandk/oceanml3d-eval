@@ -53,7 +53,9 @@ def main(argv: list[str] | None = None) -> None:
     sp.add_argument("--name", required=True)
     sp.add_argument("--var", action="append", required=True, help="canonical=source, e.g. u=ugos (repeatable)")
     sp.add_argument("--depth-m", type=float)
-    sp.add_argument("--depth-index", type=int)
+    sp.add_argument("--depth-index", type=int, help="a single level, kept under the plain name (2D reference)")
+    sp.add_argument("--depth-indices", help="levels to keep, one variable per level: '0,2,4', '0-25' or 'all' "
+                                            "(3D reference, written as <var>_d<ii>)")
 
     pl = sub.add_parser("plot", help="figures from cached results")
     pl.add_argument("--benchmark", "-b", required=True)
@@ -63,10 +65,17 @@ def main(argv: list[str] | None = None) -> None:
 
     a = p.parse_args(argv)
     if a.cmd == "split":
-        from oceanml3d_eval.split import split_to_product
+        from oceanml3d_eval.split import parse_indices, split_to_product
 
         variables = dict(v.split("=", 1) for v in a.var)
-        print(split_to_product(a.input, a.out, a.name, variables, a.depth_m, a.depth_index))
+        indices = None
+        if a.depth_indices:
+            import xarray as xr
+
+            src = xr.open_zarr(a.input) if str(a.input).endswith(".zarr") else xr.open_dataset(a.input)
+            indices = parse_indices(a.depth_indices, src.sizes.get("depth"))
+            src.close()
+        print(split_to_product(a.input, a.out, a.name, variables, a.depth_m, a.depth_index, indices))
         return
     if a.cmd == "baseline":
         from oceanml3d_eval.product import ProductSpec

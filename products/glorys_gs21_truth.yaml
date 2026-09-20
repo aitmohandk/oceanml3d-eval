@@ -1,11 +1,218 @@
-# GLORYS truth exported as a product with one variable per level (run `oceanml3d command=predict`
-# on the truth or write it with oceanml3d.inference.export.write_product); depth_index in the name.
+# GLORYS truth of the OSSE-3D Gulf Stream task, one variable per level.
+#
+# Built from the store `oceanml3d-core` prepares (`glorys/glorys_gs_multidepth_<first>-<last>.zarr`),
+# whose variables are thetao/uo/vo/zos with a depth axis. `split` flattens that axis into the
+# `<var>_d<ii>` names this manifest and `benchmarks/osse3d_gs21.yaml` use -- the indices are
+# positions on the file's depth axis, the same `depth_index` as in core's config/data/osse3d_gs21.yaml:
+#
+#   oceanml3d-eval split \
+#     --input $OCEANML3D_DATA/glorys/glorys_gs_multidepth_2010-2020.zarr \
+#     --out $OCEANML3D_DATA/glorys_gs21_truth --name glorys_gs21_truth \
+#     --var ssh=zos --var thetao=thetao --var u=uo --var v=vo \
+#     --depth-indices 0,2,4,6,8,10-25
+#
+# `split` writes its own product.yaml next to the daily files; this file is the same manifest with
+# ${OCEANML3D_DATA} kept symbolic, so the benchmark resolves it on any machine.
+format_version: 2
 name: glorys_gs21_truth
 path: ${OCEANML3D_DATA}/glorys_gs21_truth/daily
 pattern: glorys_gs21_truth_(\d{4})-(\d{2})-(\d{2})\.nc
 variables:
-  ssh: {name: ssh}
-  thetao_d00: {name: thetao_d00}
-  u_d00: {name: u_d00}
-  v_d00: {name: v_d00}
-  # ... one entry per level (generated from the product.yaml written by oceanml3d-core)
+  ssh:
+    name: ssh
+  thetao_d00:
+    name: thetao_d00
+    depth_index: 0
+  thetao_d02:
+    name: thetao_d02
+    depth_index: 2
+  thetao_d04:
+    name: thetao_d04
+    depth_index: 4
+  thetao_d06:
+    name: thetao_d06
+    depth_index: 6
+  thetao_d08:
+    name: thetao_d08
+    depth_index: 8
+  thetao_d10:
+    name: thetao_d10
+    depth_index: 10
+  thetao_d11:
+    name: thetao_d11
+    depth_index: 11
+  thetao_d12:
+    name: thetao_d12
+    depth_index: 12
+  thetao_d13:
+    name: thetao_d13
+    depth_index: 13
+  thetao_d14:
+    name: thetao_d14
+    depth_index: 14
+  thetao_d15:
+    name: thetao_d15
+    depth_index: 15
+  thetao_d16:
+    name: thetao_d16
+    depth_index: 16
+  thetao_d17:
+    name: thetao_d17
+    depth_index: 17
+  thetao_d18:
+    name: thetao_d18
+    depth_index: 18
+  thetao_d19:
+    name: thetao_d19
+    depth_index: 19
+  thetao_d20:
+    name: thetao_d20
+    depth_index: 20
+  thetao_d21:
+    name: thetao_d21
+    depth_index: 21
+  thetao_d22:
+    name: thetao_d22
+    depth_index: 22
+  thetao_d23:
+    name: thetao_d23
+    depth_index: 23
+  thetao_d24:
+    name: thetao_d24
+    depth_index: 24
+  thetao_d25:
+    name: thetao_d25
+    depth_index: 25
+  u_d00:
+    name: u_d00
+    depth_index: 0
+  u_d02:
+    name: u_d02
+    depth_index: 2
+  u_d04:
+    name: u_d04
+    depth_index: 4
+  u_d06:
+    name: u_d06
+    depth_index: 6
+  u_d08:
+    name: u_d08
+    depth_index: 8
+  u_d10:
+    name: u_d10
+    depth_index: 10
+  u_d11:
+    name: u_d11
+    depth_index: 11
+  u_d12:
+    name: u_d12
+    depth_index: 12
+  u_d13:
+    name: u_d13
+    depth_index: 13
+  u_d14:
+    name: u_d14
+    depth_index: 14
+  u_d15:
+    name: u_d15
+    depth_index: 15
+  u_d16:
+    name: u_d16
+    depth_index: 16
+  u_d17:
+    name: u_d17
+    depth_index: 17
+  u_d18:
+    name: u_d18
+    depth_index: 18
+  u_d19:
+    name: u_d19
+    depth_index: 19
+  u_d20:
+    name: u_d20
+    depth_index: 20
+  u_d21:
+    name: u_d21
+    depth_index: 21
+  u_d22:
+    name: u_d22
+    depth_index: 22
+  u_d23:
+    name: u_d23
+    depth_index: 23
+  u_d24:
+    name: u_d24
+    depth_index: 24
+  u_d25:
+    name: u_d25
+    depth_index: 25
+  v_d00:
+    name: v_d00
+    depth_index: 0
+  v_d02:
+    name: v_d02
+    depth_index: 2
+  v_d04:
+    name: v_d04
+    depth_index: 4
+  v_d06:
+    name: v_d06
+    depth_index: 6
+  v_d08:
+    name: v_d08
+    depth_index: 8
+  v_d10:
+    name: v_d10
+    depth_index: 10
+  v_d11:
+    name: v_d11
+    depth_index: 11
+  v_d12:
+    name: v_d12
+    depth_index: 12
+  v_d13:
+    name: v_d13
+    depth_index: 13
+  v_d14:
+    name: v_d14
+    depth_index: 14
+  v_d15:
+    name: v_d15
+    depth_index: 15
+  v_d16:
+    name: v_d16
+    depth_index: 16
+  v_d17:
+    name: v_d17
+    depth_index: 17
+  v_d18:
+    name: v_d18
+    depth_index: 18
+  v_d19:
+    name: v_d19
+    depth_index: 19
+  v_d20:
+    name: v_d20
+    depth_index: 20
+  v_d21:
+    name: v_d21
+    depth_index: 21
+  v_d22:
+    name: v_d22
+    depth_index: 22
+  v_d23:
+    name: v_d23
+    depth_index: 23
+  v_d24:
+    name: v_d24
+    depth_index: 24
+  v_d25:
+    name: v_d25
+    depth_index: 25
+coords:
+  lat: lat
+  lon: lon
+  time: time
+time_coverage_hours: 24
+attrs:
+  source: CMEMS GLORYS12 reanalysis, prepared by oceanml3d-core

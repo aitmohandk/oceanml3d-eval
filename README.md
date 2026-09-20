@@ -20,6 +20,10 @@ oceanml3d-eval report -b surface_currents_15m --region "Gulf Stream" --markdown 
 oceanml3d-eval report -b osse3d_gs21 --depth-profile nrmse            # skill-vs-depth table
 oceanml3d-eval plot -b osse3d_gs21 --depth-profile nrmse --figure skill_depth.png
 oceanml3d-eval split --input duacs_2019.nc --out products/duacs --name duacs --var u=ugos --var v=vgos --depth-m 15
+# a 3D reference: one variable per level (<var>_d<ii>), the naming the OSSE-3D benchmark uses
+oceanml3d-eval split --input $OCEANML3D_DATA/glorys/glorys_gs_multidepth_2010-2020.zarr \
+    --out $OCEANML3D_DATA/glorys_gs21_truth --name glorys_gs21_truth \
+    --var ssh=zos --var thetao=thetao --var u=uo --var v=vo --depth-indices 0,2,4,6,8,10-25
 ```
 
 ## Concepts
@@ -52,7 +56,7 @@ oceanml3d-eval split --input duacs_2019.nc --out products/duacs --name duacs --v
 | `surface_currents_00m` | surface currents 2019 | AOML undrogued drifters | NOSC |
 | `ssh_mapping_osse` | SSH vs GLORYS truth | GLORYS | ocean data challenges |
 | `ocean_reanalysis_osse` | full surface state OSSE | GLORYS | 4dvarnet-ocean-reanalyses CS1–CS4 |
-| `osse3d_gs21` | 3D OSSE Gulf Stream, 21 levels: nRMSE + isotropic effective resolution per level | GLORYS | NOSC `first_implementation` (`depth_profile_metrics.py`) |
+| `osse3d_gs21` | 3D OSSE Gulf Stream, 21 levels: nRMSE + isotropic effective resolution per level | GLORYS, built with `split --depth-indices` (see `products/glorys_gs21_truth.yaml`) | NOSC `first_implementation` (`depth_profile_metrics.py`) |
 
 Ensemble products (EnKF, flow-matching samplers) declare `ensemble_size` and a `member` coordinate
 (product format v2); a deterministic product is scored as a 1-member ensemble, so both appear on the

@@ -149,3 +149,79 @@ def test_gridded_metric_exposes_every_score(products):
     for score in ("rmse", "bias", "nrmse", "anom_corr", "var_explained", "mu", "sigma"):
         assert f"{score}_u" in g.scores and np.isfinite(g.scores[f"{score}_u"]), score
     assert g.meta["area_weighted"] is True
+
+
+# --- nothing is scored silently -------------------------------------------------------------------
+
+def test_a_benchmark_whose_variables_the_product_lacks_stops_the_run(products, tmp_path):
+    """The uo_d00 vs u_d00 case: the run used to score whatever else the product contained."""
+    import pytest
+    import yaml
+
+    from oceanml3d_eval.benchmarks.runner import matching_variables
+    from oceanml3d_eval.benchmarks.spec import BenchmarkSpec
+    from oceanml3d_eval.product import ProductSpec, open_product
+
+    spec = ProductSpec.load(products["truth"])                 # declares u and v
+    bench_doc = {"name": "b", "period": ["2019-01-01", "2019-01-12"], "variables": ["uo", "vo"],
+                 "references": {"truth": {"kind": "gridded", "path": str(products["truth"])}},
+                 "regions": ["GulfStream"], "metrics": [{"name": "gridded_rmse", "reference": "truth"}]}
+    path = tmp_path / "b.yaml"
+    path.write_text(yaml.safe_dump(bench_doc))
+    bench = BenchmarkSpec.load(path)
+    with pytest.raises(ValueError, match="has none of the 2 variables"):
+        matching_variables(bench, spec)
+
+    bench_doc["variables"] = ["u", "vo"]                        # partial: keeps going, says so
+    path.write_text(yaml.safe_dump(bench_doc))
+    assert matching_variables(BenchmarkSpec.load(path), spec) == ["u"]
+
+    with pytest.raises(ValueError, match="empty variable list"):
+        open_product(spec, variables=[])
+    with pytest.raises(KeyError, match="no variable"):
+        open_product(spec, variables=["u", "nope"])
+
+
+def test_a_truth_on_another_grid_is_refused_unless_asked_for():
+    import pytest
+
+    from oceanml3d_eval.metrics.gridded import align, check_same_grid
+
+    fine, _ = _pair(n=17)                                       # 0.5 deg steps
+    coarse = fine.isel(lat=slice(None, None, 4), lon=slice(None, None, 4))    # 2 deg steps
+    check_same_grid(fine.to_dataset(name="u"), fine.to_dataset(name="u"))     # same grid: fine
+    with pytest.raises(ValueError, match="not on the product's grid"):
+        align(fine.to_dataset(name="u"), coarse.to_dataset(name="u"), ["u"])
+    p, t = align(fine.to_dataset(name="u"), coarse.to_dataset(name="u"), ["u"], regrid=True)
+    assert t.u.shape == p.u.shape                               # opt-in: interpolated on purpose
+
+
+def test_a_truth_from_another_period_is_refused():
+    import pandas as pd
+    import pytest
+
+    from oceanml3d_eval.metrics.gridded import align
+
+    pred, truth = _pair()
+    other = truth.assign_coords(time=truth.time + pd.Timedelta(days=400))
+    with pytest.raises(ValueError, match="do not cover the same period"):
+        align(pred.to_dataset(name="u"), other.to_dataset(name="u"), ["u"])
+
+
+def test_an_effective_resolution_that_cannot_be_computed_says_why():
+    from oceanml3d_eval.metrics.spectral import effective_resolution, psd_lon
+
+    k = np.linspace(0.001, 0.1, 50)
+    report: dict = {}
+    assert np.isnan(effective_resolution(k, 0.01 * np.ones_like(k), np.ones_like(k), report))
+    assert "below half the signal" in report["eff_resolution_nan_reason"]
+
+    report = {}
+    assert np.isnan(effective_resolution(np.array([]), np.array([]), np.array([]), report))
+    assert "no usable row" in report["eff_resolution_nan_reason"]
+
+    da, _ = _pair(days=2, n=6)
+    da = da.where(da.lat < da.lat[-1])                           # one latitude entirely masked (land)
+    report = {}
+    psd_lon(da, report)
+    assert report["rows_used"] == 10 and report["rows_total"] == 12

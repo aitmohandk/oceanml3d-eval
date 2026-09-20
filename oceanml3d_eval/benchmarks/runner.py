@@ -13,6 +13,29 @@ from oceanml3d_eval.product import ProductSpec, open_product
 from oceanml3d_eval.regions import Region
 
 
+def matching_variables(bench: BenchmarkSpec, product: ProductSpec) -> list[str]:
+    """The benchmark's variables that the product actually has -- refusing the empty intersection.
+
+    A product whose names do not match the benchmark's (``uo_d00`` where the benchmark says
+    ``u_d00``) used to be scored anyway, on whatever else it contained, and the leaderboard looked
+    normal. Nothing is silently skipped now: an empty intersection stops the run, a partial one is
+    reported.
+    """
+    have = [v for v in bench.variables if v in product.variables]
+    missing = [v for v in bench.variables if v not in product.variables]
+    if not have:
+        raise ValueError(
+            f"product '{product.name}' has none of the {len(bench.variables)} variables of benchmark "
+            f"'{bench.name}'.\n  benchmark wants: {bench.variables[:6]}...\n  product declares: "
+            f"{sorted(product.variables)[:6]}...\n  Check the naming: the product format uses the "
+            f"canonical u, v, ssh, sst, thetao, so, mld, with a _d<ii> suffix per level.")
+    if missing:
+        print(f"[{bench.name}] {product.name}: {len(missing)}/{len(bench.variables)} variables missing "
+              f"from the product, scored on the {len(have)} shared ones (missing: {missing[:6]}"
+              f"{'...' if len(missing) > 6 else ''})")
+    return have
+
+
 def _cache_key(bench: BenchmarkSpec, product: ProductSpec, metric: str, region: str) -> str:
     h = hashlib.md5(f"{bench.name}|{bench.first}|{bench.last}|{product.path}|{metric}|{region}".encode()).hexdigest()[:10]
     return f"{product.name}__{metric}__{region}__{h}"
@@ -24,7 +47,7 @@ def run_benchmark(bench: BenchmarkSpec, product: ProductSpec | str, out_dir: str
     product = product if isinstance(product, ProductSpec) else ProductSpec.load(product)
     out_dir = Path(out_dir) / bench.name / product.name
     out_dir.mkdir(parents=True, exist_ok=True)
-    ds = open_product(product, bench.first, bench.last, [v for v in bench.variables if v in product.variables])
+    ds = open_product(product, bench.first, bench.last, matching_variables(bench, product))
     refs_cache = {}
     rows = []
     for mspec in bench.metrics:

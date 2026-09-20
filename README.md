@@ -38,6 +38,18 @@ oceanml3d-eval split --input $OCEANML3D_DATA/glorys/glorys_gs_multidepth_2010-20
 | `BenchmarkSpec` | `benchmarks/*.yaml` | period + references + regions + metrics + baselines + leaderboard columns. |
 | `run_benchmark` | `oceanml3d_eval/benchmarks/runner.py` | loops metrics × regions, caches JSON scores and NetCDF diagnostics. |
 
+## What is refused rather than scored
+
+A benchmark run stops, with the names in the message, when the product has **none** of the
+benchmark's variables (a product exporting `uo_d00` where the benchmark says `u_d00` used to be
+scored on whatever else it contained); a partial match is reported and the shared variables scored.
+A truth that is **not on the product's grid** is refused too — `interp` always succeeds, and
+smoothing a fine truth onto a coarse product flatters the model exactly where it is weakest; pass
+`regrid: true` in the metric options to interpolate on purpose. A truth covering **another period**
+is an error, and dates matched beyond the 12 h tolerance are counted in the log. When an effective
+resolution cannot be computed, the log says which of the two reasons it is (no NaN-free row, or an
+error PSD that never reaches half the signal), and how many rows the spectrum used.
+
 ## Metrics
 
 | name | reference | scores | diagnostics |

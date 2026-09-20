@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-09-20: Nothing is scored silently
+
+**Summary:** Three ways of producing plausible numbers from the wrong data now stop the run or say
+so: a product whose variables the benchmark does not find, a truth on another grid or another
+period, and an effective resolution that cannot be computed.
+
+**Files modified:** `oceanml3d_eval/product.py` — an empty `variables` list and unknown names are
+errors; `oceanml3d_eval/benchmarks/runner.py` — `matching_variables`;
+`oceanml3d_eval/metrics/gridded.py` — `check_same_grid`, `align(regrid=, time_tolerance_h=)`;
+`oceanml3d_eval/metrics/spectral.py` — `psd_lon(report=)`, `effective_resolution(report=)` and the
+reason logged; `README.md`; `tests/test_metrics.py`.
+
+**Rationale:** `wanted = variables or list(spec.variables)` turned "the caller asked for nothing"
+into "score everything", so the `uo_d00` / `u_d00` mismatch — real until `oceanml3d-core` renamed
+its currents on 2026-09-20 — produced a full leaderboard from a product the benchmark had matched no
+variable in. `interp` never fails: a 1/12 deg truth scored against a 0.25 deg product was smoothed
+onto the coarse grid, which flatters the model at the fine scales, so the grids are now compared
+first (every product cell within half of the finer step, the rule `oceanml3d-core` applies when it
+stacks variables). And `eff_resolution_km` returned a bare NaN whether the box was all land or the
+model was better than the truth at every scale — two very different statements.
+
+**Verification:** `pytest` — 51 passed, four new tests covering each refusal. On the OSSE-3D chain
+the spectral NaN now reads: *the error PSD stays below half the signal at every resolved scale (max
+ratio 0.0122, smallest wavelength 46 km)*.
+
+
 ## 2026-09-20: Gridded scores that mean something on a 3D field
 
 **Summary:** `nrmse` is now the RMSE divided by the standard deviation of the truth's *anomaly*,

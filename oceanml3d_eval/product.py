@@ -88,7 +88,17 @@ def open_product(spec: ProductSpec | str | Path, first: str | None = None, last:
     ds = ds.rename(rename)
     if "depth" in ds.dims:
         ds = ds.isel(depth=spec.depth_index or 0, drop=True)
-    wanted = variables or list(spec.variables)
+    # `variables is None` means "everything the manifest declares"; an *empty list* means the caller
+    # asked for nothing, which is a bug upstream -- `variables or list(...)` turned it into
+    # "everything" and scored a product the benchmark had found no variable in (the uo_ vs u_ case).
+    if variables is not None and not variables:
+        raise ValueError(f"open_product({spec.name}): empty variable list. The caller asked for no "
+                         f"variable; the product declares {sorted(spec.variables)[:8]}...")
+    wanted = list(spec.variables) if variables is None else list(variables)
+    unknown = [v for v in wanted if v not in spec.variables]
+    if unknown:
+        raise KeyError(f"{spec.name}: no variable {unknown} in the manifest "
+                       f"(declared: {sorted(spec.variables)[:12]}{'...' if len(spec.variables) > 12 else ''})")
     out = xr.Dataset(coords={c: ds[c] for c in ("time", "lat", "lon") if c in ds.coords})
     for canon in wanted:
         src = spec.variables[canon]

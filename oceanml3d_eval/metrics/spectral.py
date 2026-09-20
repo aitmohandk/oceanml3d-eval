@@ -12,11 +12,20 @@ from oceanml3d_eval.regions import Region
 R_EARTH_KM = 6371.0
 
 
-def psd_lon(da: xr.DataArray) -> tuple[np.ndarray, np.ndarray]:
-    """Mean PSD along lon (rows with NaN dropped), wavenumber in cycles/km."""
+def psd_lon(da: xr.DataArray, report: dict | None = None) -> tuple[np.ndarray, np.ndarray]:
+    """Mean PSD along lon (rows with NaN dropped), wavenumber in cycles/km.
+
+    A row is one latitude at one date; any NaN in it (land, a gap in the truth) drops the whole row.
+    Over a coastal box that can be most of the data, so how many rows survived is recorded in
+    ``report`` and printed by the metric -- an effective resolution computed on 2% of the rows is
+    not the same statement as one computed on all of them.
+    """
     arr = da.transpose("time", "lat", "lon").values
     rows = arr.reshape(-1, arr.shape[-1])
-    rows = rows[np.isfinite(rows).all(axis=1)]
+    usable = np.isfinite(rows).all(axis=1)
+    if report is not None:
+        report["rows_used"], report["rows_total"] = int(usable.sum()), int(usable.size)
+    rows = rows[usable]
     if len(rows) == 0:
         return np.array([]), np.array([])
     lat_mean = float(np.abs(da.lat).mean())
@@ -43,15 +52,27 @@ def isotropic_psd(field2d: np.ndarray, dx_km: float) -> tuple[np.ndarray, np.nda
     return k, psd
 
 
-def effective_resolution(k: np.ndarray, psd_err: np.ndarray, psd_ref: np.ndarray) -> float:
-    """Wavelength (km) at which err/ref PSD ratio crosses 0.5 (NaN if never)."""
-    if len(k) == 0:
+def effective_resolution(k: np.ndarray, psd_err: np.ndarray, psd_ref: np.ndarray,
+                         report: dict | None = None) -> float:
+    """Wavelength (km) at which err/ref PSD ratio crosses 0.5 (NaN if never).
+
+    ``report`` collects the reason for a NaN: no spectrum at all, or a ratio that never reaches 0.5
+    (the error stays below half the signal at every scale the grid resolves -- possible, but on a
+    small or noisy sample it usually means the box is too small to say anything).
+    """
+    def _why(reason: str) -> float:
+        if report is not None:
+            report["eff_resolution_nan_reason"] = reason
         return np.nan
+
+    if len(k) == 0:
+        return _why("no usable row: every line of latitude has a NaN (land or a gap in the truth)")
     with np.errstate(divide="ignore", invalid="ignore"):
         ratio = psd_err / psd_ref
     idx = np.where(ratio >= 0.5)[0]
     if len(idx) == 0:
-        return np.nan
+        return _why(f"the error PSD stays below half the signal at every resolved scale "
+                    f"(max ratio {np.nanmax(ratio):.3g}, smallest wavelength {1 / k[-1]:.0f} km)")
     i = idx[0]
     if i == 0:
         return float(1 / k[0])
@@ -67,21 +88,29 @@ class SpectralScore(Metric):
     def compute(self, product: xr.Dataset, reference: xr.Dataset, region: Region, first: str, last: str) -> MetricResult:
         variables = select_variables(product, reference, self.options)
         prod = region.bbox_subset(product).sel(time=slice(first, last))  # spectra need full rows: bbox only
-        prod, truth = align(prod, reference.sel(time=slice(first, last)), variables)
-        res, diag = {}, {}
+        prod, truth = align(prod, reference.sel(time=slice(first, last)), variables,
+                            regrid=bool(self.options.get("regrid", False)))
+        res, diag, notes = {}, {}, {"region": region.name}
         isotropic = bool(self.options.get("isotropic", False))
         stride = int(self.options.get("time_stride", 5))
         for v in variables:
+            report: dict = {}
             if isotropic:
                 p_ref, p_err = _isotropic_mean(prod[v], truth[v], stride)
                 k = p_ref[0]
                 p_ref, p_err = p_ref[1], p_err[1]
             else:
-                k, p_ref = psd_lon(truth[v].load())
+                k, p_ref = psd_lon(truth[v].load(), report)
                 _, p_err = psd_lon((prod[v] - truth[v]).load())
-            res[f"eff_resolution_km_{v}"] = effective_resolution(k, p_err, p_ref)
+            res[f"eff_resolution_km_{v}"] = effective_resolution(k, p_err, p_ref, report)
+            if report.get("rows_total") and report["rows_used"] < 0.5 * report["rows_total"]:
+                print(f"[spectral] {v}: only {report['rows_used']}/{report['rows_total']} rows are "
+                      f"NaN-free; the spectrum speaks for that subset only")
+            if "eff_resolution_nan_reason" in report:
+                print(f"[spectral] {v}: no effective resolution -- {report['eff_resolution_nan_reason']}")
+            notes.update({f"{v}__{k2}": val for k2, val in report.items()})
             diag[f"psd_{v}"] = xr.Dataset({"psd_ref": ("k", p_ref), "psd_err": ("k", p_err)}, coords={"k": k})
-        return MetricResult(res, diag, {"region": region.name})
+        return MetricResult(res, diag, notes)
 
 
 def _isotropic_mean(prod: xr.DataArray, truth: xr.DataArray, stride: int):

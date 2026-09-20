@@ -26,10 +26,60 @@ from oceanml3d_eval.metrics.base import Metric, MetricResult, register_metric
 from oceanml3d_eval.regions import Region
 
 
-def align(product: xr.Dataset, truth: xr.Dataset, variables: list[str]) -> tuple[xr.Dataset, xr.Dataset]:
-    truth = truth[variables].interp(lat=product.lat, lon=product.lon)
-    truth = truth.reindex(time=product.time, method="nearest", tolerance=np.timedelta64(12, "h"))
-    return product[variables], truth
+def check_same_grid(product: xr.Dataset, truth: xr.Dataset, tol: float = 0.5) -> None:
+    """Refuse a truth that is not on the product's grid, instead of interpolating it quietly.
+
+    ``interp`` always succeeds: score a 0.25 deg product against a 1/12 deg truth and the truth is
+    smoothed onto the coarse grid, which flatters the model exactly where it is weakest -- the fine
+    scales. The rule is the one ``oceanml3d-core`` applies when it stacks variables: every target
+    cell must sit within half a grid step of a source cell. Pass ``regrid: true`` in the metric
+    options to interpolate deliberately.
+    """
+    for dim in ("lat", "lon"):
+        if dim not in product.coords or dim not in truth.coords:
+            continue
+        dst = np.asarray(product[dim].values, float)
+        src = np.asarray(truth[dim].values, float)
+        if src.size == 0 or dst.size == 0:
+            raise ValueError(f"empty '{dim}' axis: the region selects nothing of the product or the truth")
+        steps = [float(np.median(np.abs(np.diff(a)))) for a in (src, dst) if a.size > 1]
+        if not steps:
+            continue
+        step = min(steps)                    # the finer of the two grids sets the tolerance
+        worst = float(np.abs(dst[:, None] - src[None, :]).min(axis=1).max())
+        if worst > tol * step:
+            raise ValueError(
+                f"the truth is not on the product's grid along '{dim}': the worst product cell is "
+                f"{worst:.4g} deg from its nearest truth cell, more than {tol} x the finer step "
+                f"({step:.4g} deg). Prepare both at the same resolution, or set `regrid: true` in the "
+                f"metric options to interpolate the truth on purpose.")
+
+
+def align(product: xr.Dataset, truth: xr.Dataset, variables: list[str],
+          regrid: bool = False, time_tolerance_h: int = 12) -> tuple[xr.Dataset, xr.Dataset]:
+    truth = truth[variables]
+    if not regrid:
+        check_same_grid(product, truth)
+    truth = truth.interp(lat=product.lat, lon=product.lon)
+    matched = truth.reindex(time=product.time, method="nearest",
+                            tolerance=np.timedelta64(time_tolerance_h, "h"))
+    if "time" in matched.dims:
+        missing = _missing_times(matched, variables)
+        if missing == matched.sizes["time"]:
+            raise ValueError(
+                f"no truth time step within {time_tolerance_h} h of the product's "
+                f"[{str(product.time.values[0])[:10]}, {str(product.time.values[-1])[:10]}]: "
+                f"the two do not cover the same period.")
+        if missing:
+            print(f"[gridded] {missing}/{matched.sizes['time']} dates have no truth within "
+                  f"{time_tolerance_h} h and are scored as missing")
+    return product[variables], matched
+
+
+def _missing_times(matched: xr.Dataset, variables: list[str]) -> int:
+    first = matched[variables[0]]
+    dims = [d for d in first.dims if d != "time"]
+    return int((~np.isfinite(first)).all(dims).sum()) if dims else 0
 
 
 def select_variables(product: xr.Dataset, reference: xr.Dataset, options: dict) -> list[str]:
@@ -105,7 +155,8 @@ class GriddedRMSE(Metric):
         variables = select_variables(product, reference, self.options)
         weighted = bool(self.options.get("area_weighted", True))
         prod = region.subset(product).sel(time=slice(first, last))
-        prod, truth = align(prod, reference.sel(time=slice(first, last)), variables)
+        prod, truth = align(prod, reference.sel(time=slice(first, last)), variables,
+                            regrid=bool(self.options.get("regrid", False)))
         res: dict[str, float] = {}
         maps = xr.Dataset()
         for v in variables:

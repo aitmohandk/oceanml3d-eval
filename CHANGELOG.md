@@ -1,5 +1,33 @@
 # Changelog
 
+## 2026-09-20: Baselines built from the truth, and scores resolved in time
+
+**Summary:** `oceanml3d-eval baseline-product` writes a **climatology** or a **persistence** product
+from a truth, so every benchmark has a line to beat without any extra data; `osse3d_gs21` now
+declares both. `gridded_rmse` saves a `scores_by_date` table (RMSE and bias per date and variable)
+and adds per-season RMSEs.
+
+**Files modified:** `oceanml3d_eval/baseline_products.py` (new) — `climatology` (day-of-year mean
+over an explicit training window, smoothed and wrapped at the turn of the year), `persistence`
+(lagged truth), `make_baseline`; `oceanml3d_eval/cli.py` — `baseline-product`;
+`oceanml3d_eval/metrics/gridded.py` — `scores_by_date`, `seasonal_scores`, option
+`seasonal_variables`; `benchmarks/osse3d_gs21.yaml` — `baselines:` and the commands that build them;
+`README.md`; `tests/test_metrics.py`.
+
+**Rationale:** the 3D benchmark had no `baselines:` at all, so its leaderboard had one line and
+nothing said whether a score was good. A climatology is the "no skill" line — measured on a
+synthetic truth, it scores `var_explained = -0.02` and `nrmse = 1.01` on a white-noise field, and
+`var_explained = 0.82` on a field that really has a seasonal cycle, which is the point: that skill
+belongs to the season, not to the model. Persistence scores `nrmse = 1.41` on white noise
+(`sqrt(2)` by construction). The training window is explicit and a climatology trained inside the
+scored window warns, because that baseline would have seen the answers. And a single number over a
+year hides a drift or one bad season: the per-date table makes it visible, seasons are pooled
+separately, and for a 64-variable task the seasonal columns stay opt-in (`seasonal_variables`).
+
+**Verification:** `pytest` — 54 passed, including the climatology / persistence identities above and
+a drifting product whose bias grows day by day in `scores_by_date`.
+
+
 ## 2026-09-20: Nothing is scored silently
 
 **Summary:** Three ways of producing plausible numbers from the wrong data now stop the run or say

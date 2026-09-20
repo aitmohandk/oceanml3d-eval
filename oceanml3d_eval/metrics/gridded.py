@@ -13,6 +13,12 @@ standard deviation of the truth's anomaly (its time mean removed at each cell), 
 question for every variable: how much of the variability is reproduced. ``mu``/``sigma`` are kept,
 unchanged and clearly named, for continuity with the published SSH challenges.
 
+**Resolve the scores in time.** One number over a year hides a drift, a bad season or a few broken
+days: ``scores_by_date`` is saved as a diagnostic table (one row per date and variable, RMSE and
+bias), and ``rmse_<v>_DJF`` … per season are added for the variables of ``seasonal_variables``
+(every variable when a benchmark scores eight or fewer; a 64-variable 3D task would otherwise add
+256 columns to the leaderboard).
+
 **Weight by cell area.** A regular lat/lon grid over-samples high latitudes; an unweighted mean over
 a global region gives a cell at 60 degN twice the weight of one at the equator. Every mean below is
 weighted by ``cos(lat)``. Pass ``area_weighted: false`` in the metric options for the plain mean.
@@ -20,6 +26,7 @@ weighted by ``cos(lat)``. Pass ``area_weighted: false`` in the metric options fo
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import xarray as xr
 
 from oceanml3d_eval.metrics.base import Metric, MetricResult, register_metric
@@ -147,6 +154,33 @@ def scores_for(pred: xr.DataArray, truth: xr.DataArray, weighted: bool = True) -
     }
 
 
+SEASONS = {12: "DJF", 1: "DJF", 2: "DJF", 3: "MAM", 4: "MAM", 5: "MAM",
+           6: "JJA", 7: "JJA", 8: "JJA", 9: "SON", 10: "SON", 11: "SON"}
+
+
+def scores_by_date(pred: xr.DataArray, truth: xr.DataArray, weighted: bool = True) -> pd.DataFrame:
+    """One row per date: RMSE and bias. A single number over a year hides a drift or one bad month."""
+    import pandas as pd
+
+    w = area_weights(truth) if weighted else xr.ones_like(truth.lat)
+    err = (pred - truth).load()
+    rmse = np.sqrt(weighted_mean(err ** 2, w))
+    bias = weighted_mean(err, w)
+    return pd.DataFrame({"time": pd.DatetimeIndex(err.time.values),
+                         "rmse": np.asarray(rmse.values, float), "bias": np.asarray(bias.values, float)})
+
+
+def seasonal_scores(pred: xr.DataArray, truth: xr.DataArray, weighted: bool = True) -> dict[str, float]:
+    """``{DJF: rmse, MAM: ...}``: the same RMSE, per season, pooled over its dates."""
+    out = {}
+    months = pd.DatetimeIndex(truth.time.values).month if "time" in truth.dims else []
+    for season in ("DJF", "MAM", "JJA", "SON"):
+        keep = np.array([SEASONS[m] == season for m in months])
+        if keep.any():
+            out[season] = scores_for(pred.isel(time=keep), truth.isel(time=keep), weighted)["rmse"]
+    return out
+
+
 @register_metric("gridded_rmse")
 class GriddedRMSE(Metric):
     needs = "gridded"
@@ -159,8 +193,18 @@ class GriddedRMSE(Metric):
                             regrid=bool(self.options.get("regrid", False)))
         res: dict[str, float] = {}
         maps = xr.Dataset()
+        per_date = []
+        seasonal_for = self.options.get("seasonal_variables", variables if len(variables) <= 8 else [])
         for v in variables:
             for score, value in scores_for(prod[v], truth[v], weighted).items():
                 res[f"{score}_{v}"] = value
+            for season, value in (seasonal_scores(prod[v], truth[v], weighted) if v in seasonal_for else {}).items():
+                res[f"rmse_{v}_{season}"] = value
             maps[f"rmse_{v}"] = np.sqrt(((prod[v] - truth[v]) ** 2).mean("time"))
-        return MetricResult(res, {"rmse_map": maps}, {"region": region.name, "area_weighted": weighted})
+            day = scores_by_date(prod[v], truth[v], weighted)
+            day.insert(1, "variable", v)
+            per_date.append(day)
+        diagnostics: dict = {"rmse_map": maps}
+        if per_date:
+            diagnostics["scores_by_date"] = pd.concat(per_date, ignore_index=True)
+        return MetricResult(res, diagnostics, {"region": region.name, "area_weighted": weighted})

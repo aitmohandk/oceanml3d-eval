@@ -225,3 +225,71 @@ def test_an_effective_resolution_that_cannot_be_computed_says_why():
     report = {}
     psd_lon(da, report)
     assert report["rows_used"] == 10 and report["rows_total"] == 12
+
+
+# --- baselines built from the truth ---------------------------------------------------------------
+
+def _seasonal_truth(tmp_path, years=("2017", "2019")):
+    import pandas as pd
+
+    from oceanml3d_eval.split import split_to_product
+
+    time = pd.date_range(f"{years[0]}-01-01", f"{years[1]}-12-31")
+    lat, lon = np.linspace(33, 43, 8), np.linspace(-65, -55, 8)
+    season = 3 * np.sin(2 * np.pi * time.dayofyear.values / 365.25)[:, None, None]
+    noise = np.random.default_rng(0).normal(size=(len(time), lat.size, lon.size))
+    xr.Dataset({"thetao": (("time", "lat", "lon"), (18 + season + noise).astype("f4")),
+                "u": (("time", "lat", "lon"), (0.3 * noise).astype("f4"))},
+               coords={"time": time, "lat": lat, "lon": lon}).to_netcdf(tmp_path / "raw.nc")
+    return split_to_product(tmp_path / "raw.nc", tmp_path / "truth", "truth",
+                            {"thetao": "thetao", "u": "u"})
+
+
+def test_climatology_is_the_no_skill_line_and_persistence_the_yesterday_line(tmp_path):
+    from oceanml3d_eval.baseline_products import make_baseline
+    from oceanml3d_eval.metrics.gridded import GriddedRMSE
+    from oceanml3d_eval.product import open_product
+
+    truth_manifest = _seasonal_truth(tmp_path)
+    clim = make_baseline(truth_manifest, tmp_path / "clim", "climatology", "2019-01-01", "2019-12-31",
+                         train=("2017-01-01", "2018-12-31"))
+    pers = make_baseline(truth_manifest, tmp_path / "pers", "persistence", "2019-01-01", "2019-12-31")
+    truth = open_product(truth_manifest, "2019-01-01", "2019-12-31")
+    region = Region.get("GulfStream_eval")
+
+    s = GriddedRMSE().compute(open_product(clim), truth, region, "2019-01-01", "2019-12-31")
+    assert abs(s.scores["var_explained_u"]) < 0.1 and abs(s.scores["nrmse_u"] - 1) < 0.1   # pure noise: no skill
+    assert s.scores["var_explained_thetao"] > 0.5            # the seasonal cycle *is* skill
+
+    p = GriddedRMSE().compute(open_product(pers), truth, region, "2019-01-01", "2019-12-31")
+    assert abs(p.scores["nrmse_u"] - np.sqrt(2)) < 0.1       # yesterday's white noise: rmse = sqrt(2) std
+    assert p.scores["rmse_u"] > s.scores["rmse_u"]           # ... worse than the climatology here
+
+
+def test_a_climatology_trained_on_the_scored_year_is_not_what_we_build(tmp_path):
+    """The training window is explicit: leaking the scored year would flatter the baseline."""
+    import pytest
+
+    from oceanml3d_eval.baseline_products import make_baseline
+
+    truth_manifest = _seasonal_truth(tmp_path)
+    with pytest.raises(ValueError, match="no date in the training window"):
+        make_baseline(truth_manifest, tmp_path / "c2", "climatology", "2019-01-01", "2019-01-31",
+                      train=("2025-01-01", "2025-12-31"))
+
+
+def test_scores_are_resolved_in_time(tmp_path):
+    from oceanml3d_eval.metrics.gridded import GriddedRMSE
+    from oceanml3d_eval.product import open_product
+
+    truth_manifest = _seasonal_truth(tmp_path, years=("2019", "2019"))
+    truth = open_product(truth_manifest)
+    drifting = truth + xr.DataArray(np.linspace(0, 2, truth.sizes["time"]), dims="time",
+                                    coords={"time": truth.time})
+    s = GriddedRMSE().compute(drifting, truth, Region.get("GulfStream_eval"), "2019-01-01", "2019-12-31")
+    table = s.diagnostics["scores_by_date"]
+    assert set(table.columns) == {"time", "variable", "rmse", "bias"}
+    assert len(table) == 2 * truth.sizes["time"]
+    first, last = table[table.variable == "u"].iloc[0], table[table.variable == "u"].iloc[-1]
+    assert last["bias"] - first["bias"] > 1.5                # the drift is visible day by day
+    assert s.scores["rmse_u_DJF"] < s.scores["rmse_u_SON"]   # ... and season by season

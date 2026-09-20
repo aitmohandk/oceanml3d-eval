@@ -10,6 +10,17 @@ regions: [GulfStream_eval]
 metrics:
   - {name: gridded_rmse,   reference: glorys_truth}
   - {name: spectral_score, reference: glorys_truth, options: {variables: [ssh], isotropic: true, time_stride: 5}}
+# The lines a model must beat, built from the truth itself (`oceanml3d-eval baseline-product`):
+#   baseline-product --truth ../products/glorys_gs21_truth.yaml --kind climatology \
+#       --out $OCEANML3D_DATA/baselines/climatology --first 2019-01-01 --last 2019-12-31 \
+#       --train 2010-01-01 2017-12-15          # the training window of the task, never 2019
+#   baseline-product --truth ../products/glorys_gs21_truth.yaml --kind persistence \
+#       --out $OCEANML3D_DATA/baselines/persistence --first 2019-01-01 --last 2019-12-31
+# Then: oceanml3d-eval run -b osse3d_gs21 -p <model>/product.yaml --baselines
+baselines:
+  climatology: ${OCEANML3D_DATA}/baselines/climatology/product.yaml
+  persistence: ${OCEANML3D_DATA}/baselines/persistence/product.yaml
+
 # nrmse = RMSE / std of the truth's anomaly: comparable between a 18 degC temperature and a 0.3 m/s
 # current, which rms-normalised scores are not. var_explained < 0 means worse than the climatology.
 leaderboard: [nrmse_ssh, nrmse_thetao_d00, nrmse_thetao_d12, nrmse_thetao_d25, nrmse_u_d00, nrmse_u_d25,

@@ -57,6 +57,18 @@ def main(argv: list[str] | None = None) -> None:
     sp.add_argument("--depth-indices", help="levels to keep, one variable per level: '0,2,4', '0-25' or 'all' "
                                             "(3D reference, written as <var>_d<ii>)")
 
+    bp = sub.add_parser("baseline-product", help="build a climatology / persistence product from a truth")
+    bp.add_argument("--truth", required=True, help="manifest of the truth (products/*.yaml)")
+    bp.add_argument("--kind", required=True, choices=["climatology", "persistence"])
+    bp.add_argument("--out", required=True)
+    bp.add_argument("--name")
+    bp.add_argument("--first", required=True, help="first scored date (YYYY-MM-DD)")
+    bp.add_argument("--last", required=True)
+    bp.add_argument("--train", nargs=2, metavar=("FIRST", "LAST"),
+                    help="window the climatology is estimated on (never the scored one)")
+    bp.add_argument("--lag-days", type=int, default=1, help="persistence lag (default 1)")
+    bp.add_argument("--smooth-days", type=int, default=31, help="climatology smoothing window")
+
     pl = sub.add_parser("plot", help="figures from cached results")
     pl.add_argument("--benchmark", "-b", required=True)
     pl.add_argument("--out", default="results")
@@ -76,6 +88,12 @@ def main(argv: list[str] | None = None) -> None:
             indices = parse_indices(a.depth_indices, src.sizes.get("depth"))
             src.close()
         print(split_to_product(a.input, a.out, a.name, variables, a.depth_m, a.depth_index, indices))
+        return
+    if a.cmd == "baseline-product":
+        from oceanml3d_eval.baseline_products import make_baseline
+
+        print(make_baseline(a.truth, a.out, a.kind, a.first, a.last, a.name,
+                            tuple(a.train) if a.train else None, a.lag_days, a.smooth_days))
         return
     if a.cmd == "baseline":
         from oceanml3d_eval.product import ProductSpec

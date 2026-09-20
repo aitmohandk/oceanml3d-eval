@@ -19,6 +19,8 @@ oceanml3d-eval run -b surface_currents_15m -p outputs/nosc_15m_duacs/<run>/produ
 oceanml3d-eval report -b surface_currents_15m --region "Gulf Stream" --markdown leaderboard.md
 oceanml3d-eval report -b osse3d_gs21 --depth-profile nrmse            # skill-vs-depth table
 oceanml3d-eval plot -b osse3d_gs21 --depth-profile nrmse --figure skill_depth.png
+oceanml3d-eval baseline-product --truth products/glorys_gs21_truth.yaml --kind climatology \
+    --out $OCEANML3D_DATA/baselines/climatology --first 2019-01-01 --last 2019-12-31 --train 2010-01-01 2017-12-15
 oceanml3d-eval split --input duacs_2019.nc --out products/duacs --name duacs --var u=ugos --var v=vgos --depth-m 15
 # a 3D reference: one variable per level (<var>_d<ii>), the naming the OSSE-3D benchmark uses
 oceanml3d-eval split --input $OCEANML3D_DATA/glorys/glorys_gs_multidepth_2010-2020.zarr \
@@ -56,9 +58,17 @@ error PSD that never reaches half the signal), and how many rows the spectrum us
 |---|---|---|---|
 | `eulerian_drifters` | drifter points | `rmse_u/v/vec`, `bias`, `corr`, `var_explained`, `n_obs` | binned RMSE map |
 | `lagrangian_drifters` | drifter points (with `id`) | `sep_km_dayN` (RK4 advection; optional `velocity_metrics` backend) | — |
-| `gridded_rmse` | gridded truth | `rmse`, `bias`, `nrmse` (÷ anomaly std), `anom_corr`, `var_explained`, and `mu`/`sigma` (SSH data-challenge, ÷ RMS); area-weighted | time-mean RMSE map |
+| `gridded_rmse` (time-resolved: `scores_by_date` table, `rmse_<v>_DJF`… per season) | gridded truth | `rmse`, `bias`, `nrmse` (÷ anomaly std), `anom_corr`, `var_explained`, and `mu`/`sigma` (SSH data-challenge, ÷ RMS); area-weighted | time-mean RMSE map |
 | `ensemble_scores` | gridded truth | `crps`, `energy_score`, `spread`, `rmse_mean`, `spread_skill` | rank histogram |
 | `spectral_score` | gridded truth | `eff_resolution_km` (PSD err/ref = 0.5; along-lon or `isotropic: true`) | PSDs |
+
+## Baselines built from the truth
+
+`baseline-product` writes two reference products that need no extra data: a **climatology**
+(day-of-year mean over a *training* window, smoothed) and a **persistence** (the truth `--lag-days`
+earlier). Both are ordinary products, scored by the same metrics as a model, and both are what makes
+a score readable: with the anomaly-normalised scores a climatology lands on `var_explained ≈ 0` and
+`nrmse ≈ 1`, so a model below that line has learnt nothing beyond the season.
 
 ## Benchmarks
 

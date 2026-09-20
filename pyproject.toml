@@ -8,7 +8,15 @@ version = "0.1.0"
 description = "Benchmarks and metrics for ocean reconstruction products (neural models and baselines alike)."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+# EUPL-1.2, the licence of oceanml3d-core: this repository shares product_contract.py with it byte
+# for byte, and legacy_from_fm/ comes from an upstream that stated no terms (see LICENSING.md and
+# NOTICE). The previous `{ text = "MIT" }`, with no LICENSE file, was unsupported.
+license = { file = "LICENSE" }
+classifiers = [
+    "License :: OSI Approved :: European Union Public Licence 1.2 (EUPL 1.2)",
+    "Programming Language :: Python :: 3.10",
+    "Topic :: Scientific/Engineering :: Atmospheric Science",
+]
 dependencies = [
     "numpy>=1.24",
     "scipy>=1.11",

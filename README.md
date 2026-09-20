@@ -109,3 +109,8 @@ instead of going unnoticed. `baselines/*.json` belongs in git.
 `lagrangian_drifters` reproduces the paper's Lagrangian/SDE diagnostics bit-for-bit
 (`oceanml3d_eval/velocity_metrics_backend.py` writes the legacy JSON descriptors for you).
 `oceanml3d_eval/plots.py` gives RMSE maps, PSD ratios and skill-vs-depth curves.
+
+## Licence
+
+EUPL-1.2 — see `LICENSE`, `NOTICE` and [`LICENSING.md`](LICENSING.md). `third_party/velocity_metrics`
+is OceanDataLab's package, vendored unchanged under LGPL-3.0-or-later with its own licence texts.

@@ -1,5 +1,27 @@
 # Changelog
 
+## 2026-09-20: EUPL-1.2, and the licence texts the vendored package needs
+
+**Summary:** the repository has a `LICENSE` (EUPL-1.2, the same file as `oceanml3d-core`), a `NOTICE`
+and a `LICENSING.md`; `pyproject.toml` no longer claims MIT; `third_party/velocity_metrics` carries
+the LGPL-3.0 and GPL-3.0 texts it asked for.
+
+**Files modified:** `LICENSE`, `NOTICE`, `LICENSING.md` (new), `pyproject.toml`, `README.md`,
+`third_party/velocity_metrics/{LICENSE,COPYING,README.md}` (new texts).
+
+**Rationale:** a public repository with no licence file is all rights reserved whatever the metadata
+says, so nobody could reuse this one. MIT was not available to declare either: `legacy_from_fm/` is
+copied from `4dvarnet-fm-opencode`, which stated no terms, and its terms come from the rightsholder's
+permission recorded in `oceanml3d-core/LICENSING.md`. EUPL-1.2 keeps the pair consistent, which
+matters for a repository that shares `product_contract.py` byte for byte with `core`. The vendored
+`velocity_metrics` stays LGPL-3.0-or-later, separately installable and used through its public
+interface; its own README asked for the licence text "before redistributing", which fell due when the
+repository was made public.
+
+**Verification:** `sha256 LICENSE = 57fb42fb…68a4b4`, identical to `oceanml3d-core/LICENSE`; `pytest`
+— 54 passed.
+
+
 ## 2026-09-20: Baselines built from the truth, and scores resolved in time
 
 **Summary:** `oceanml3d-eval baseline-product` writes a **climatology** or a **persistence** product

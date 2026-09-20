@@ -44,7 +44,7 @@ oceanml3d-eval split --input $OCEANML3D_DATA/glorys/glorys_gs_multidepth_2010-20
 |---|---|---|---|
 | `eulerian_drifters` | drifter points | `rmse_u/v/vec`, `bias`, `corr`, `var_explained`, `n_obs` | binned RMSE map |
 | `lagrangian_drifters` | drifter points (with `id`) | `sep_km_dayN` (RK4 advection; optional `velocity_metrics` backend) | — |
-| `gridded_rmse` | gridded truth | `rmse`, `nrmse`, `mu`, `sigma` (SSH data-challenge style) | time-mean RMSE map |
+| `gridded_rmse` | gridded truth | `rmse`, `bias`, `nrmse` (÷ anomaly std), `anom_corr`, `var_explained`, and `mu`/`sigma` (SSH data-challenge, ÷ RMS); area-weighted | time-mean RMSE map |
 | `ensemble_scores` | gridded truth | `crps`, `energy_score`, `spread`, `rmse_mean`, `spread_skill` | rank histogram |
 | `spectral_score` | gridded truth | `eff_resolution_km` (PSD err/ref = 0.5; along-lon or `isotropic: true`) | PSDs |
 

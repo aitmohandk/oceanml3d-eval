@@ -1,5 +1,31 @@
 # Changelog
 
+## 2026-09-20: Gridded scores that mean something on a 3D field
+
+**Summary:** `nrmse` is now the RMSE divided by the standard deviation of the truth's *anomaly*,
+`bias`, `anom_corr` and `var_explained` are computed on gridded fields, and every mean is weighted
+by cell area. `mu`/`sigma` keep their SSH data-challenge definition.
+
+**Files modified:** `oceanml3d_eval/metrics/gridded.py` -- `scores_for`, `area_weights`,
+`weighted_mean`, option `area_weighted` (default true); `benchmarks/osse3d_gs21.yaml` leaderboard;
+`README.md`; `tests/test_metrics.py`.
+
+**Rationale:** `rmse / rms(truth)` is the SSH convention, and SSH is near zero-mean. Temperature is
+not. Measured on the OSSE-3D chain, the same relative error gave `nrmse_thetao_d00 = 0.0055` against
+`nrmse_ssh = 0.100` and `nrmse_u_d00 = 0.333`: the temperature levels looked 18x better than they
+were, and the skill-vs-depth curve -- the point of the task -- was flattened level by level. With
+the anomaly normalisation the same run gives 0.109, 0.110 and 0.365, which compare. The scores that
+were missing were the ones that separate the kinds of error: a constant offset is a `bias`, not
+noise; `var_explained < 0` says the model is worse than the climatology; `anom_corr` says whether
+the variability is in the right place. Area weighting matters as soon as a region is wide in
+latitude: on a regular grid an unweighted mean gives a cell at 60 degN twice the weight of one at
+the equator.
+
+**Verification:** `pytest` -- 47 passed, including: `nrmse` invariant to the field's mean, a constant
+offset read as a bias, the climatology scoring `var_explained = 0` and `nrmse = 1`, and an error
+placed at 60 degN weighing less than the same error at the equator.
+
+
 ## 2026-09-20: `split --depth-indices`, and a truth the OSSE-3D benchmark can actually use
 
 **Summary:** `split` turns a depth-resolved store into one variable per level (`thetao_d00`,

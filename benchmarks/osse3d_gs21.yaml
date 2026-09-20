@@ -10,4 +10,7 @@ regions: [GulfStream_eval]
 metrics:
   - {name: gridded_rmse,   reference: glorys_truth}
   - {name: spectral_score, reference: glorys_truth, options: {variables: [ssh], isotropic: true, time_stride: 5}}
-leaderboard: [nrmse_ssh, nrmse_thetao_d00, nrmse_thetao_d12, nrmse_thetao_d25, nrmse_u_d00, nrmse_u_d25, eff_resolution_km_ssh]
+# nrmse = RMSE / std of the truth's anomaly: comparable between a 18 degC temperature and a 0.3 m/s
+# current, which rms-normalised scores are not. var_explained < 0 means worse than the climatology.
+leaderboard: [nrmse_ssh, nrmse_thetao_d00, nrmse_thetao_d12, nrmse_thetao_d25, nrmse_u_d00, nrmse_u_d25,
+              var_explained_thetao_d12, anom_corr_thetao_d12, eff_resolution_km_ssh]
